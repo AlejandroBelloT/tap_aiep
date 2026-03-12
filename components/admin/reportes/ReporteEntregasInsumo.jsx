@@ -105,21 +105,6 @@ export default function ReporteEntregasInsumo() {
 
     const insumoSel = catalogo.find(i => i.id === insumoId);
 
-    // Resumen: top 5 trabajadores que más recibieron este insumo
-    const porTrabajador = filas.reduce((acc, s) => {
-        const nombre = s.trabajador?.nombre ?? 'Desconocido';
-        if (!acc[nombre]) acc[nombre] = { cantidad: 0, pedidos: 0, servicio: s.trabajador?.servicio ?? '' };
-        acc[nombre].cantidad += s.cantidad;
-        acc[nombre].pedidos += 1;
-        return acc;
-    }, {});
-    const topTrabajadores = Object.entries(porTrabajador)
-        .sort((a, b) => b[1].cantidad - a[1].cantidad)
-        .slice(0, 6);
-
-    const totalEntregado = filas.reduce((a, s) => a + s.cantidad, 0);
-    const recibidas = filas.filter(s => s.estado === 'recibida').length;
-
     return (
         <div className="space-y-5">
             {/* Selector */}
@@ -206,58 +191,6 @@ export default function ReporteEntregasInsumo() {
             {/* Resultados */}
             {insumoId && !loading && !error && (
                 <div className="space-y-4">
-                    {/* Stats rápidos */}
-                    {filas.length > 0 && (
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4">
-                                <p className="text-3xl font-bold text-purple-700">{filas.length}</p>
-                                <p className="text-xs text-purple-500 mt-0.5">Despachos totales</p>
-                            </div>
-                            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-                                <p className="text-3xl font-bold text-blue-700">{totalEntregado}</p>
-                                <p className="text-xs text-blue-500 mt-0.5">{insumoSel?.unidad_medida} entregadas</p>
-                            </div>
-                            <div className="bg-green-50 border border-green-100 rounded-2xl p-4">
-                                <p className="text-3xl font-bold text-green-700">{recibidas}</p>
-                                <p className="text-xs text-green-500 mt-0.5">confirmadas recibidas</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Top receptores */}
-                    {topTrabajadores.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <h4 className="font-semibold text-slate-700 text-sm mb-3">
-                                👥 Top receptores — {insumoSel?.nombre}
-                            </h4>
-                            <div className="space-y-2">
-                                {topTrabajadores.map(([nombre, d], i) => {
-                                    const pct = totalEntregado > 0 ? Math.round((d.cantidad / totalEntregado) * 100) : 0;
-                                    return (
-                                        <div key={nombre} className="flex items-center gap-3">
-                                            <span className="text-xs text-slate-400 w-4 shrink-0 text-right">{i + 1}</span>
-                                            <div className="w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center shrink-0">
-                                                {nombre.charAt(0)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-0.5">
-                                                    <p className="text-xs font-medium text-slate-700 truncate">{nombre}</p>
-                                                    <p className="text-xs text-slate-500 shrink-0 ml-2">
-                                                        <span className="font-semibold text-slate-700">{d.cantidad}</span> {insumoSel?.unidad_medida} ({pct}%)
-                                                    </p>
-                                                </div>
-                                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-purple-400 rounded-full" style={{ width: `${pct}%` }} />
-                                                </div>
-                                                {d.servicio && <p className="text-xs text-slate-400 mt-0.5">{d.servicio}</p>}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Tabla detalle */}
                     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">

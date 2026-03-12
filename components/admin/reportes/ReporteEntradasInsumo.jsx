@@ -54,13 +54,30 @@ function exportarCSV(filas) {
 }
 
 export default function ReporteEntradasInsumo() {
+    const [catalogo, setCatalogo] = useState([]);
+    const [catalogoCargado, setCatalogoCargado] = useState(false);
     const [periodo, setPeriodo] = useState({ desde: restarDias(30), hasta: hoy() });
     const [filas, setFilas] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [filtroOrigen, setFiltroOrigen] = useState('todos');
     const [filtroInsumo, setFiltroInsumo] = useState('');
+    const [dropAbierto, setDropAbierto] = useState(false);
     const fetchId = useRef(0);
+    const dropRef = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => { if (dropRef.current && !dropRef.current.contains(e.target)) setDropAbierto(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const cargarCatalogo = useCallback(async () => {
+        if (catalogoCargado) return;
+        const { data } = await supabase.from('insumos').select('nombre').order('nombre');
+        setCatalogo(data ?? []);
+        setCatalogoCargado(true);
+    }, [catalogoCargado]);
 
     const fetchData = useCallback((desde, hasta) => {
         const myId = ++fetchId.current;
@@ -78,8 +95,6 @@ export default function ReporteEntradasInsumo() {
                 if (myId !== fetchId.current) return;
                 if (err) { setError(err.message); setLoading(false); return; }
                 setFilas(data ?? []);
-                setFiltroOrigen('todos');
-                setFiltroInsumo('');
                 setLoading(false);
             });
     }, []);
@@ -94,6 +109,10 @@ export default function ReporteEntradasInsumo() {
 
     const totalIngresado = filas.reduce((a, m) => a + m.cantidad, 0);
 
+    const sugerencias = dropAbierto
+        ? [...new Set(catalogo.map(i => i.nombre))].filter(n => n.toLowerCase().includes(filtroInsumo.toLowerCase())).slice(0, 12)
+        : [];
+
     return (
         <div className="space-y-5">
             {/* Selector de insumo y período */}
@@ -105,14 +124,42 @@ export default function ReporteEntradasInsumo() {
 
                 <PeriodSelector desde={periodo.desde} hasta={periodo.hasta} onChange={p => { setPeriodo(p); fetchData(p.desde, p.hasta); }} />
 
-                <input
-                    type="text"
-                    placeholder="Filtrar por nombre de insumo…"
-                    value={filtroInsumo}
-                    onChange={e => setFiltroInsumo(e.target.value)}
-                    className="w-full max-w-sm text-sm px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-800
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
-                />
+                <div className="relative w-full max-w-sm" ref={dropRef}>
+                    <div className="relative">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Filtrar por nombre de insumo…"
+                            value={filtroInsumo}
+                            onFocus={() => { cargarCatalogo(); setDropAbierto(true); }}
+                            onChange={e => { setFiltroInsumo(e.target.value); cargarCatalogo(); setDropAbierto(true); }}
+                            className="w-full pl-9 pr-8 py-2.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-400"
+                        />
+                        {filtroInsumo && (
+                            <button
+                                onClick={() => { setFiltroInsumo(''); setDropAbierto(false); }}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-base leading-none"
+                                title="Limpiar filtro"
+                            >✕</button>
+                        )}
+                    </div>
+                    {dropAbierto && sugerencias.length > 0 && (
+                        <ul className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                            {sugerencias.map(nombre => (
+                                <li
+                                    key={nombre}
+                                    onMouseDown={e => { e.preventDefault(); setFiltroInsumo(nombre); setDropAbierto(false); }}
+                                    className={`px-3 py-2 cursor-pointer text-sm hover:bg-blue-50
+                                        ${nombre === filtroInsumo ? 'bg-blue-50 font-medium text-blue-700' : 'text-slate-700'}`}
+                                >
+                                    {nombre}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
 
                 {loading && (
                     <div className="flex items-center gap-2 text-xs text-slate-400">
