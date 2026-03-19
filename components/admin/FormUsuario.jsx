@@ -114,7 +114,7 @@ export default function FormUsuario({ usuario, onSuccess, onClose }) {
                 }),
             });
 
-            const json = await res.json();
+            const json = await res.json().catch(() => ({}));
             setLoading(false);
 
             if (!res.ok) {

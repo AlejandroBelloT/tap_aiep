@@ -66,7 +66,6 @@ export default function AdminPage() {
             { count: pendientes },
             { count: autorizadas },
             { count: rechazadas },
-            { count: insumosBajoStock },
         ] = await Promise.all([
             supabase.from('usuarios').select('*', { count: 'exact', head: true }),
             supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('activo', true),
@@ -74,9 +73,12 @@ export default function AdminPage() {
             supabase.from('solicitudes').select('*', { count: 'exact', head: true }).eq('estado', 'pendiente'),
             supabase.from('solicitudes').select('*', { count: 'exact', head: true }).in('estado', ['autorizada', 'despachada']),
             supabase.from('solicitudes').select('*', { count: 'exact', head: true }).eq('estado', 'rechazada'),
-            supabase.from('insumos').select('*', { count: 'exact', head: true })
-                .filter('stock_actual', 'lte', 'stock_minimo'),
         ]);
+
+        // Comparación columna-a-columna no soportada por PostgREST mediante filtros simples;
+        // se obtienen las columnas relevantes y se filtra en el cliente.
+        const { data: insumosRows } = await supabase.from('insumos').select('stock_actual, stock_minimo');
+        const insumosBajoStock = insumosRows?.filter(i => i.stock_actual <= i.stock_minimo).length ?? 0;
 
         setStats({
             totalUsuarios: totalUsuarios ?? 0,
